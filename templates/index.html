@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Docker Shop</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="container">
+    <header>
+      <div>
+        <p class="eyebrow">DOCKER COMPOSE PRACTICE</p>
+        <h1>My Shop</h1>
+        <p class="subtitle">Flask + MySQL + Docker Compose</p>
+      </div>
+      <a class="health" href="/health">Check DB</a>
+    </header>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for message in messages %}
+          <div class="flash">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <section class="card">
+      <h2>Add Product</h2>
+      <form action="/add" method="post" class="form">
+        <input name="name" placeholder="Product name" required>
+        <input name="price" type="number" step="0.01" placeholder="Price" required>
+        <button type="submit">Add Product</button>
+      </form>
+    </section>
+
+    <section>
+      <div class="section-title">
+        <h2>Products</h2>
+        <span>{{ products|length }} items</span>
+      </div>
+      <div class="grid">
+        {% for product in products %}
+        <article class="product">
+          <div>
+            <h3>{{ product.name }}</h3>
+            <p>Product #{{ product.id }}</p>
+          </div>
+          <div class="bottom">
+            <strong>Rs. {{ "%.2f"|format(product.price) }}</strong>
+            <form action="/delete/{{ product.id }}" method="post">
+              <button class="delete" type="submit">Delete</button>
+            </form>
+          </div>
+        </article>
+        {% else %}
+          <p>No products found.</p>
+        {% endfor %}
+      </div>
+    </section>
+  </main>
+</body>
+</html>
