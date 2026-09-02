@@ -38,10 +38,8 @@ pipeline {
             
             }
 
-        
-        
-        
         }
+    }    
     post {
         always {
             echo "fininshed"
@@ -60,33 +58,6 @@ pipeline {
     
     
     
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    
 
 }
