@@ -1,4 +1,5 @@
 services:
+
   app:
     build: .
     container_name: flask-staging
@@ -10,7 +11,8 @@ services:
       MYSQL_USER: root
       MYSQL_PASSWORD: root
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
 
   mysql:
     image: mysql:8
@@ -18,3 +20,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: shop
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
