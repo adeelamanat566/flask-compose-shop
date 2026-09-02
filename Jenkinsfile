@@ -1,4 +1,3 @@
-
 pipeline {
     agent any
 
@@ -16,7 +15,29 @@ pipeline {
         )
     }
 
-        
+    stages {
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Verify Files') {
+            steps {
+                sh '''
+                    echo "Checking project files..."
+                    ls -la
+
+                    test -f Dockerfile
+                    test -f compose.yaml
+                    test -f requirements.txt
+                    test -f app.py
+
+                    echo "All required files are present."
+                '''
+            }
+        }
 
         stage('Validate Compose') {
             steps {
@@ -55,7 +76,27 @@ pipeline {
             }
         }
 
-        
+        stage('Health Check') {
+            when {
+                expression {
+                    return params.DEPLOY
+                }
+            }
+
+            steps {
+                sh '''
+                    echo "Waiting for application..."
+                    sleep 10
+
+                    docker compose ps
+
+                    echo "Testing Flask application..."
+                    curl -f http://localhost:5000/
+
+                    echo "Application is healthy!"
+                '''
+            }
+        }
     }
 
     post {
@@ -80,4 +121,3 @@ pipeline {
         }
     }
 }
-
