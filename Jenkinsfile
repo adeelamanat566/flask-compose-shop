@@ -37,7 +37,7 @@ pipeline {
                 test -f app.py
 
                 echo "All required files are present."
-        '''
+                '''
             }
         }
 
