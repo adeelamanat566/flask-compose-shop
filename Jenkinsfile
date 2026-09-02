@@ -1,63 +1,83 @@
+
 pipeline {
     agent any
-    stages {
-        stage('build'){
-            steps { 
-            sh 'docker compose build'
+
+    parameters {
+        choice(
+            name: 'ENVIRONMENT',
+            choices: ['staging', 'production'],
+            description: 'Select deployment environment'
+        )
+
+        booleanParam(
+            name: 'DEPLOY',
+            defaultValue: true,
+            description: 'Deploy application after build'
+        )
+    }
+
+        
+
+        stage('Validate Compose') {
+            steps {
+                sh '''
+                    echo "Validating Docker Compose..."
+                    docker compose config
+                '''
             }
-        
-        
         }
-        stage('test'){
-            
-                steps {
-                sh 'docker compose up -d '
-                
+
+        stage('Build') {
+            steps {
+                sh '''
+                    echo "Building Docker images..."
+                    docker compose build
+                '''
+            }
+        }
+
+        stage('Deploy') {
+            when {
+                expression {
+                    return params.DEPLOY
                 }
-            
-        
-        
-        
-        }
-        stage('input'){
-            steps {
-                input (
-                    message: 'we continue'
-                )
-            
-            }
-        
-        
-        
-        
-        }
-        stage('deploy'){
-            steps {
-                sh 'docker compose up -d' 
-                
-            
             }
 
+            steps {
+                sh '''
+                    echo "Deploying to ${ENVIRONMENT}..."
+
+                    docker compose up -d
+
+                    echo "Running containers:"
+                    docker compose ps
+                '''
+            }
         }
-    }    
+
+        
+    }
+
     post {
-        always {
-            echo "fininshed"
-            }
-        failure {
-            echo "failure"
 
-            }
         success {
-            echo "success"
-            }
-
-        
-        
+            echo "Pipeline completed successfully!"
+            echo "Build Number: ${BUILD_NUMBER}"
+            echo "Environment: ${ENVIRONMENT}"
         }
-    
-    
-    
-    
 
+        failure {
+            echo "Pipeline FAILED!"
+
+            sh '''
+                docker compose ps || true
+                docker compose logs --tail=50 || true
+            '''
+        }
+
+        always {
+            echo "Pipeline finished."
+        }
+    }
 }
+
