@@ -1,94 +1,123 @@
 pipeline {
     agent any
 
-    parameters {
-        choice(
-            name: 'ENVIRONMENT',
-            choices: ['staging', 'production'],
-            description: 'Select deployment environment'
-        )
-
-        booleanParam(
-            name: 'DEPLOY',
-            defaultValue: true,
-            description: 'Deploy application after build'
-        )
-    }
-
     stages {
-
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
 
         stage('Verify Files') {
             steps {
                 sh '''
-                echo "Checking project files..."
+                    echo "Checking project files..."
 
-                ls -la
+                    ls -la
 
-                test -f Dockerfile
-                test -f compose.staging.yaml
-                test -f compose.production.yaml
-                test -f requirements.txt
-                test -f app.py
+                    test -f Dockerfile
+                    test -f compose.staging.yaml
+                    test -f compose.production.yaml
+                    test -f requirements.txt
+                    test -f app.py
 
-            echo "All required files are present."
+                    echo "All required files are present."
                 '''
             }
         }
 
-        
-
-        stage('Build') {
+        stage('Validate Compose') {
             steps {
                 sh '''
-                    echo "Building Docker images..."
-                    docker compose build
+                    echo "Validating Staging Compose..."
+                    docker compose -f compose.staging.yaml config
+
+                    echo "Validating Production Compose..."
+                    docker compose -f compose.production.yaml config
                 '''
             }
         }
 
-        stage('Deploy') {
-            when {
-                expression {
-                    return params.DEPLOY
-                }
-            }
-
+        stage('Build Staging') {
             steps {
                 sh '''
-                    echo "Deploying to ${ENVIRONMENT}..."
+                    echo "Building Staging..."
 
-                    docker compose up -d
-
-                    echo "Running containers:"
-                    docker compose ps
+                    docker compose -f compose.staging.yaml build
                 '''
             }
         }
 
-        stage('Health Check') {
-            when {
-                expression {
-                    return params.DEPLOY
-                }
-            }
-
+        stage('Deploy Staging') {
             steps {
                 sh '''
-                    echo "Waiting for application..."
+                    echo "Deploying Staging..."
+
+                    docker compose -f compose.staging.yaml up -d
+
+                    echo "Staging containers:"
+                    docker compose -f compose.staging.yaml ps
+                '''
+            }
+        }
+
+        stage('Test Staging') {
+            steps {
+                sh '''
+                    echo "Waiting for Staging..."
                     sleep 10
 
-                    docker compose ps
+                    echo "Testing Staging..."
 
-                    echo "Testing Flask application..."
+                    docker compose -f compose.staging.yaml ps
+
+                    curl -f http://localhost:5001/
+
+                    echo "Staging is healthy!"
+                '''
+            }
+        }
+
+        stage('Production Approval') {
+            steps {
+                input(
+                    message: 'Staging tests passed. Deploy to Production?',
+                    ok: 'Deploy Production'
+                )
+            }
+        }
+
+        stage('Build Production') {
+            steps {
+                sh '''
+                    echo "Building Production..."
+
+                    docker compose -f compose.production.yaml build
+                '''
+            }
+        }
+
+        stage('Deploy Production') {
+            steps {
+                sh '''
+                    echo "Deploying Production..."
+
+                    docker compose -f compose.production.yaml up -d
+
+                    echo "Production containers:"
+                    docker compose -f compose.production.yaml ps
+                '''
+            }
+        }
+
+        stage('Test Production') {
+            steps {
+                sh '''
+                    echo "Waiting for Production..."
+                    sleep 10
+
+                    echo "Testing Production..."
+
+                    docker compose -f compose.production.yaml ps
+
                     curl -f http://localhost:5000/
 
-                    echo "Application is healthy!"
+                    echo "Production is healthy!"
                 '''
             }
         }
@@ -98,16 +127,23 @@ pipeline {
 
         success {
             echo "Pipeline completed successfully!"
-            echo "Build Number: ${BUILD_NUMBER}"
-            echo "Environment: ${ENVIRONMENT}"
         }
 
         failure {
             echo "Pipeline FAILED!"
 
             sh '''
-                docker compose ps || true
-                docker compose logs --tail=50 || true
+                echo "Staging containers:"
+                docker compose -f compose.staging.yaml ps || true
+
+                echo "Staging logs:"
+                docker compose -f compose.staging.yaml logs --tail=50 || true
+
+                echo "Production containers:"
+                docker compose -f compose.production.yaml ps || true
+
+                echo "Production logs:"
+                docker compose -f compose.production.yaml logs --tail=50 || true
             '''
         }
 
