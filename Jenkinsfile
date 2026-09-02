@@ -26,16 +26,18 @@ pipeline {
         stage('Verify Files') {
             steps {
                 sh '''
-                    echo "Checking project files..."
-                    ls -la
+                echo "Checking project files..."
 
-                    test -f Dockerfile
-                    test -f compose.yaml
-                    test -f requirements.txt
-                    test -f app.py
+                ls -la
 
-                    echo "All required files are present."
-                '''
+                test -f Dockerfile
+                test -f compose.staging.yaml
+                test -f compose.production.yaml
+                test -f requirements.txt
+                test -f app.py
+
+                echo "All required files are present."
+        '''
             }
         }
 
