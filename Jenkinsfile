@@ -23,16 +23,25 @@ pipeline {
             }
         }
 
-        
-
-        stage('Validate Compose') {
+        stage('Verify Files') {
             steps {
                 sh '''
-                    echo "Validating Docker Compose..."
-                    docker compose config
+                echo "Checking project files..."
+
+                ls -la
+
+                test -f Dockerfile
+                test -f compose.staging.yaml
+                test -f compose.production.yaml
+                test -f requirements.txt
+                test -f app.py
+
+            echo "All required files are present."
                 '''
             }
         }
+
+        
 
         stage('Build') {
             steps {
